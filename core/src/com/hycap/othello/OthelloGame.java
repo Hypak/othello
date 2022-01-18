@@ -26,8 +26,8 @@ public class OthelloGame extends ApplicationAdapter {
 	private final Player aiPlayer = new AIPlayer1(true);
 	private boolean isPlayer = true;
 	private int framesUntilCalculate = 0;
-	Pair<Integer, Integer> lastAiMove = new Pair<>(-1, -1);
-	List<Pair<Integer, Integer>> lastFlips = new ArrayList<>();
+	IntPair lastAiMove = new IntPair(-1, -1);
+	List<IntPair> lastFlips = new ArrayList<>();
 
 	private final float scaleFactor = 15;
 	private final int viewWidth = 1920;
@@ -136,9 +136,9 @@ public class OthelloGame extends ApplicationAdapter {
 		renderBoard();
 
 		renderPieces();
-		renderTexOnBoard(aiHighlight, lastAiMove.getL(), lastAiMove.getR());
-		for (Pair<Integer, Integer> flip : lastFlips) {
-			renderTexOnBoard(greyHighlight, flip.getL(), flip.getR());
+		renderTexOnBoard(aiHighlight, lastAiMove.getX(), lastAiMove.getY());
+		for (IntPair flip : lastFlips) {
+			renderTexOnBoard(greyHighlight, flip.getX(), flip.getY());
 		}
 		Pair<Integer, Integer> mouseBoardPos = TransformCoords.GetBoardCoords(
 				Gdx.input.getX(), Gdx.input.getY());

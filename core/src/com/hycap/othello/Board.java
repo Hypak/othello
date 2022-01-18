@@ -16,18 +16,18 @@ public class Board {
         return whiteAdvantage;
     }
 
-    private static final List<Pair<Integer, Integer>> movementVectors;
+    private static final List<IntPair> movementVectors;
 
     static {
         movementVectors = new ArrayList<>();
-        movementVectors.add(new Pair<> (1, 1));
-        movementVectors.add(new Pair<> (1, 0));
-        movementVectors.add(new Pair<> (1, -1));
-        movementVectors.add(new Pair<> (0, -1));
-        movementVectors.add(new Pair<> (-1, -1));
-        movementVectors.add(new Pair<> (-1, 0));
-        movementVectors.add(new Pair<> (-1, 1));
-        movementVectors.add(new Pair<> (0, 1));
+        movementVectors.add(new IntPair(1, 1));
+        movementVectors.add(new IntPair(1, 0));
+        movementVectors.add(new IntPair(1, -1));
+        movementVectors.add(new IntPair(0, -1));
+        movementVectors.add(new IntPair(-1, -1));
+        movementVectors.add(new IntPair(-1, 0));
+        movementVectors.add(new IntPair(-1, 1));
+        movementVectors.add(new IntPair(0, 1));
     }
 
     public Board() {
@@ -63,22 +63,22 @@ public class Board {
         return SquareType.BLACK;
     }
 
-    public static Pair<Integer, Integer> GetNewMove(Board newBoard, Board oldBoard) {
+    public static IntPair GetNewMove(Board newBoard, Board oldBoard) {
         long voidDiff = newBoard.isVoid ^ oldBoard.isVoid;
         int i;
         for (i = 0; voidDiff != 0; ++i, voidDiff >>=1) ;
         --i;
-        return new Pair<>(i % 8, i / 8);
+        return new IntPair(i % 8, i / 8);
     }
 
-    public static List<Pair<Integer, Integer>> GetNewFlips(Board newBoard, Board oldBoard) {
-        List<Pair<Integer, Integer>> newFlips = new ArrayList<>();
+    public static List<IntPair> GetNewFlips(Board newBoard, Board oldBoard) {
+        List<IntPair> newFlips = new ArrayList<>();
         long voidDiff = newBoard.isVoid ^ oldBoard.isVoid;
         long colourDiff = newBoard.isWhite ^ oldBoard.isWhite;
         long diff = colourDiff & ~voidDiff;
         for (int i = 0; diff != 0; ++i, diff >>=1) {
             if (diff % 2 != 0) {
-                newFlips.add(new Pair<>(i % 8, i / 8));
+                newFlips.add(new IntPair(i % 8, i / 8));
             }
         }
         return newFlips;
@@ -102,16 +102,16 @@ public class Board {
             sameType = SquareType.BLACK;
             oppositeType = SquareType.WHITE;
         }
-        for (Pair<Integer, Integer> vec : movementVectors) {
+        for (IntPair vec : movementVectors) {
             int testX = x;
             int testY = y;
             int j;
             for (j = 0; j < 8; ++j) {
-                testX += vec.getL();
-                testY += vec.getR();
+                testX += vec.getX();
+                testY += vec.getY();
                 if (testX < 0 || testX > 7 || testY < 0 || testY > 7) {
-                    testX -= vec.getL();
-                    testY -= vec.getR();
+                    testX -= vec.getX();
+                    testY -= vec.getY();
                 }
                 if (GetSquareType(testX, testY) != oppositeType) {
                     break;
@@ -131,8 +131,8 @@ public class Board {
             int flipX = x;
             int flipY = y;
             for (int k = 0; k < j; ++k) {
-                flipX += vec.getL();
-                flipY += vec.getR();
+                flipX += vec.getX();
+                flipY += vec.getY();
                 int pos = flipX + 8*flipY;
                 this.isWhite ^= 1L << pos;
             }

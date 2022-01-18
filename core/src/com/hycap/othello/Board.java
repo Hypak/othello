@@ -52,6 +52,30 @@ public class Board {
         this.freeSquares = board.getFreeSquares();
     }
 
+    public int GetWhiteCount() {
+        int count = 0;
+        long voidCopy = isVoid;
+        long whiteCopy = isWhite;
+        for (int i = 0; i < 64; ++i, voidCopy >>>= 1, whiteCopy >>>= 1) {
+            if (voidCopy % 2 == 0 && whiteCopy % 2 != 0) {
+                ++count;
+            }
+        }
+        return count;
+    }
+
+    public int GetBlackCount() {
+        int count = 0;
+        long voidCopy = isVoid;
+        long whiteCopy = isWhite;
+        for (int i = 0; i < 64; ++i, voidCopy >>>= 1, whiteCopy >>>= 1) {
+            if (voidCopy % 2 == 0 && whiteCopy % 2 == 0) {
+                ++count;
+            }
+        }
+        return count;
+    }
+
     public SquareType GetSquareType(int x, int y) {
         int i = x + 8*y;
         if ((isVoid >>> i) % 2 != 0) {
@@ -66,7 +90,8 @@ public class Board {
     public static IntPair GetNewMove(Board newBoard, Board oldBoard) {
         long voidDiff = newBoard.isVoid ^ oldBoard.isVoid;
         int i;
-        for (i = 0; voidDiff != 0; ++i, voidDiff >>=1) ;
+        for (i = 0; voidDiff != 0 && i <= 64; ++i, voidDiff >>>=1) {
+        }
         --i;
         return new IntPair(i % 8, i / 8);
     }

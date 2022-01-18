@@ -58,7 +58,7 @@ public class AIPlayer1 implements Player{
         final int minDepth = 2;
 
         long time = System.nanoTime();
-        long maxTime = 3000L * 1000000;
+        long maxTime = 300L * 1000000;
 
         Board bestBoard = board;  // If the original board is returned, then there are 0 legal moves
         List<Board> nextBoards = board.GetAllNextTurnBoards(isWhite);
@@ -82,7 +82,8 @@ public class AIPlayer1 implements Player{
                         nextBoards.add(0, bestBoard);
                     }
                 }
-                if (System.nanoTime() - time > maxTime) {  // Timeout for searching
+                long timeElapsed = System.nanoTime() - time;
+                if (timeElapsed > maxTime) {  // Timeout for searching
                     return true;
                 }
             }

@@ -1,10 +1,16 @@
 package com.hycap.othello;
 
 import com.badlogic.gdx.*;
+import com.badlogic.gdx.graphics.Camera;
+import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.*;
+import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.ScreenUtils;
+import com.badlogic.gdx.utils.viewport.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,6 +19,7 @@ public class OthelloGame extends ApplicationAdapter {
 	private Texture whitePiece;
 	private Texture blackPiece;
 	private Texture boardTex;
+	private Texture blankSquare;
 	private Texture highlight;
 	private Texture whiteHighlight;
 	private Texture blackHighlight;
@@ -21,24 +28,36 @@ public class OthelloGame extends ApplicationAdapter {
 	private Texture aiHighlight;
 	private SpriteBatch batch;
 
+	private Camera camera;
+	private Viewport viewport;
+
+	private Skin skin;
+	private Stage uiStage;
+	private Table scoreTable;
+	private Label whiteScoreLabel;
+	private Label blackScoreLabel;
+	private Label blankSquareLabel;
+
 	private Board board;
 	private final boolean playerIsWhite = false;
 	private final Player aiPlayer = new AIPlayer1(true);
 	private boolean isPlayer = true;
-	private int framesUntilCalculate = 0;
+	private float timeUntilCalculate = 0;
+	private float baseTimeUntilCalculate = 1f;
+	private float doubleMoveTimeUntilCalculate = 0.75f;
 	IntPair lastAiMove = new IntPair(-1, -1);
 	List<IntPair> lastFlips = new ArrayList<>();
 
-	private final float scaleFactor = 15;
-	private final int viewWidth = 1920;
-	private final int viewHeight = 1080;
-
 	@Override
 	public void create () {
+		skin = new Skin(Gdx.files.internal("gdx-skins-master/flat/skin/skin.json"));
+
 		whitePiece = new Texture(
 				Gdx.files.internal("whitePiece.png"));
 		blackPiece = new Texture(
 				Gdx.files.internal("blackPiece.png"));
+		blankSquare = new Texture(
+				Gdx.files.internal("blankSquare.png"));
 		boardTex = new Texture(
 				Gdx.files.internal("board.png"));
 		highlight = new Texture(
@@ -49,6 +68,7 @@ public class OthelloGame extends ApplicationAdapter {
 				Gdx.files.internal("blackHighlight.png"));
 		greyHighlight = new Texture(
 				Gdx.files.internal("greyHighlight.png"));
+
 		if (playerIsWhite) {
 			playerHighlight = whiteHighlight;
 			aiHighlight = blackHighlight;
@@ -57,6 +77,29 @@ public class OthelloGame extends ApplicationAdapter {
 			aiHighlight = whiteHighlight;
 		}
 
+		camera = new OrthographicCamera();
+		viewport = new ExtendViewport(TransformCoords.boardSize, TransformCoords.boardSize, camera);
+		scoreTable = new Table();
+		scoreTable.setPosition(TransformCoords.boardSize, TransformCoords.boardSize / 2f - TransformCoords.squareSize);
+
+		blankSquareLabel = new Label("N/A", skin);
+		whiteScoreLabel = new Label("N/A", skin);
+		blackScoreLabel = new Label("N/A", skin);
+
+		scoreTable.add(blankSquareLabel);
+		scoreTable.add(new Label(" Free", skin));
+		scoreTable.row();
+
+		scoreTable.add(blackScoreLabel);
+		scoreTable.add(new Image(blackPiece));
+		scoreTable.row();
+
+		scoreTable.add(whiteScoreLabel);
+		scoreTable.add(new Image(whitePiece));
+		scoreTable.row();
+
+		uiStage = new Stage(viewport);
+		uiStage.addActor(scoreTable);
 
 		batch = new SpriteBatch();
 		board = new Board();
@@ -64,9 +107,12 @@ public class OthelloGame extends ApplicationAdapter {
 		Gdx.input.setInputProcessor(new InputAdapter() {
 			@Override
 			public boolean touchUp(int screenX, int screenY, int pointer, int button) {
+				Vector3 touchPos = new Vector3(screenX, screenY, 0);
+				camera.unproject(touchPos);
 				if (button == Input.Buttons.LEFT) {
-					Pair<Integer, Integer> boardPos = TransformCoords.GetBoardCoords(screenX, screenY);
-					playerMove(boardPos.getL(), boardPos.getR());
+					IntPair boardPos = TransformCoords.GetBoardCoords(touchPos.x, touchPos.y);
+					System.out.println(boardPos);
+					playerMove(boardPos.getX(), boardPos.getY());
 				}
 				return false;
 			}
@@ -81,29 +127,31 @@ public class OthelloGame extends ApplicationAdapter {
 		});
 	}
 
+	public void resize(int width, int height) {
+		viewport.update(width, height, true);
+	}
+
 	private void playerMove(int boardX, int boardY) {
 		Board oldBoard = new Board(board);
 		if (board.TryMove(boardX, boardY, playerIsWhite, false)) {
 			lastFlips = Board.GetNewFlips(board, oldBoard);
+			if (board.GetAllNextTurnBoards(!playerIsWhite).size() == 0) {
+				return;
+			}
 			isPlayer = false;
-			framesUntilCalculate = 1;
+			timeUntilCalculate = baseTimeUntilCalculate;
 		}
 	}
 
 	private void renderTexOnBoard(Texture tex, int boardX, int boardY) {
 		float squareSize = TransformCoords.squareSize;
-		Vector2 worldPos = TransformCoords.GetWorldCoords(boardX, boardY);
-		batch.draw(tex, worldPos.x - squareSize / 2f,
-				worldPos.y - squareSize / 2f,
-				squareSize, squareSize);
+		batch.draw(tex, 8 + boardX * squareSize, 8 + boardY*squareSize, squareSize, squareSize);
 	}
 
 	private void renderBoard() {
 		final float boardWidth = TransformCoords.boardSize;
 		final float boardHeight = TransformCoords.boardSize;
-		int halfWidth = viewWidth / 2;
-		int halfHeight = viewHeight / 2;
-		batch.draw(boardTex, halfWidth - boardWidth / 2f, halfHeight - boardHeight / 2f,
+		batch.draw(boardTex, 0,0,
 				boardWidth, boardHeight);
 	}
 
@@ -131,7 +179,15 @@ public class OthelloGame extends ApplicationAdapter {
 				backgroundGreen / 255f,
 				backgroundBlue / 255f, 1);
 
+		camera.update();
+		batch.setProjectionMatrix(camera.combined);
 		batch.begin();
+
+		blackScoreLabel.setText(Integer.toString(board.GetBlackCount()));
+		whiteScoreLabel.setText(Integer.toString(board.GetWhiteCount()));
+		blankSquareLabel.setText(Integer.toString(board.getFreeSquares()));
+		scoreTable.pack();
+
 
 		renderBoard();
 
@@ -140,25 +196,39 @@ public class OthelloGame extends ApplicationAdapter {
 		for (IntPair flip : lastFlips) {
 			renderTexOnBoard(greyHighlight, flip.getX(), flip.getY());
 		}
-		Pair<Integer, Integer> mouseBoardPos = TransformCoords.GetBoardCoords(
-				Gdx.input.getX(), Gdx.input.getY());
-		int mbX = mouseBoardPos.getL();
-		int mbY = mouseBoardPos.getR();
+		Vector3 mousePos = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
+		camera.unproject(mousePos);
+		IntPair boardPos = TransformCoords.GetBoardCoords(mousePos.x, mousePos.y);
+		int mbX = boardPos.getX();
+		int mbY = boardPos.getY();
 		if (mbX >= 0 && mbX < 8 && mbY >= 0 && mbY < 8) {
 			renderTexOnBoard(playerHighlight, mbX, mbY);
 		}
 
 		if (!isPlayer) {
-			if (framesUntilCalculate < 1) {
+			if (timeUntilCalculate < 1) {
 				Board oldBoard = new Board(board);
+				System.out.println("AI thinking from:");
+				System.out.println(oldBoard);
 				aiPlayer.PlayMove(board);
+				System.out.println("AI moved to:");
+				System.out.println(board);
 				lastAiMove = Board.GetNewMove(board, oldBoard);
 				lastFlips = Board.GetNewFlips(board, oldBoard);
-				isPlayer = true;
+				if (board.GetAllNextTurnBoards(playerIsWhite).size() == 0) {
+					isPlayer = false;
+					timeUntilCalculate = doubleMoveTimeUntilCalculate;
+				} else {
+					isPlayer = true;
+				}
+				System.out.println("isPlayer: " + isPlayer);
 			}
-			--framesUntilCalculate;
+			timeUntilCalculate -= Gdx.graphics.getDeltaTime();
 		}
 		batch.end();
+
+		uiStage.act();
+		uiStage.draw();
 	}
 	
 	@Override

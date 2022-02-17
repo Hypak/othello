@@ -3,7 +3,7 @@ package com.hycap.othello;
 import java.util.ArrayList;
 import java.util.List;
 
-public class BestEvaluator implements Evaluator{
+public class BestEvaluatorTest implements Evaluator{
 
     static int cornerVal = 10;
     static int edgeVal = 2;

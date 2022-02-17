@@ -37,10 +37,11 @@ public class OthelloGame extends ApplicationAdapter {
 	private Label whiteScoreLabel;
 	private Label blackScoreLabel;
 	private Label blankSquareLabel;
+	private Label evaluationLabel;
 
 	private Board board;
 	private final boolean playerIsWhite = false;
-	private final Player aiPlayer = new AIPlayer1(true);
+	private Player aiPlayer;
 	private boolean isPlayer = true;
 	private float timeUntilCalculate = 0;
 	private float baseTimeUntilCalculate = 1f;
@@ -76,6 +77,8 @@ public class OthelloGame extends ApplicationAdapter {
 			playerHighlight = blackHighlight;
 			aiHighlight = whiteHighlight;
 		}
+		aiPlayer = new AIPlayer1(true);
+
 
 		camera = new OrthographicCamera();
 		viewport = new ExtendViewport(TransformCoords.boardSize, TransformCoords.boardSize, camera);
@@ -85,6 +88,7 @@ public class OthelloGame extends ApplicationAdapter {
 		blankSquareLabel = new Label("N/A", skin);
 		whiteScoreLabel = new Label("N/A", skin);
 		blackScoreLabel = new Label("N/A", skin);
+		evaluationLabel = new Label("N/A", skin);
 
 		scoreTable.add(blankSquareLabel);
 		scoreTable.add(new Label(" Free", skin));
@@ -97,6 +101,8 @@ public class OthelloGame extends ApplicationAdapter {
 		scoreTable.add(whiteScoreLabel);
 		scoreTable.add(new Image(whitePiece));
 		scoreTable.row();
+
+		// scoreTable.add(evaluationLabel);
 
 		uiStage = new Stage(viewport);
 		uiStage.addActor(scoreTable);
@@ -111,7 +117,6 @@ public class OthelloGame extends ApplicationAdapter {
 				camera.unproject(touchPos);
 				if (button == Input.Buttons.LEFT) {
 					IntPair boardPos = TransformCoords.GetBoardCoords(touchPos.x, touchPos.y);
-					System.out.println(boardPos);
 					playerMove(boardPos.getX(), boardPos.getY());
 				}
 				return false;
@@ -186,6 +191,7 @@ public class OthelloGame extends ApplicationAdapter {
 		blackScoreLabel.setText(Integer.toString(board.GetBlackCount()));
 		whiteScoreLabel.setText(Integer.toString(board.GetWhiteCount()));
 		blankSquareLabel.setText(Integer.toString(board.getFreeSquares()));
+		evaluationLabel.setText(Float.toString(new BestEvaluator().Evaluate(board)));
 		scoreTable.pack();
 
 
@@ -208,11 +214,7 @@ public class OthelloGame extends ApplicationAdapter {
 		if (!isPlayer) {
 			if (timeUntilCalculate < 1) {
 				Board oldBoard = new Board(board);
-				System.out.println("AI thinking from:");
-				System.out.println(oldBoard);
 				aiPlayer.PlayMove(board);
-				System.out.println("AI moved to:");
-				System.out.println(board);
 				lastAiMove = Board.GetNewMove(board, oldBoard);
 				lastFlips = Board.GetNewFlips(board, oldBoard);
 				if (board.GetAllNextTurnBoards(playerIsWhite).size() == 0) {
@@ -221,7 +223,6 @@ public class OthelloGame extends ApplicationAdapter {
 				} else {
 					isPlayer = true;
 				}
-				System.out.println("isPlayer: " + isPlayer);
 			}
 			timeUntilCalculate -= Gdx.graphics.getDeltaTime();
 		}
